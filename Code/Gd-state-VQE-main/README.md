@@ -1,0 +1,1 @@
+Project to explore the phase space of the MFIM model 

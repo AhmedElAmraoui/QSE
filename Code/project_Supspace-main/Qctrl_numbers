@@ -1,0 +1,3 @@
+This is from a post of Q-CTRL, which we may use to estimate QPU time for IBM:
+The smallest problems we solved (28–32 nodes MaxCut) implemented 12 optimization steps, which totals to 72 circuits, each executed with 6,000 shots to a total of 432,000 shots throughout the full optimization process. IBM’s reported repetition time is ∼ 4, 000 shots per second, resulting in an ideal QPU time of 108 seconds. In practice, the measured QPU time of these jobs is about 150 seconds."
+Thus the calculation divides 150s/6000 when it should be 150s/432,000.  The correct value of t_sample is not 25ms, but rather ~0.25-0.3ms.
