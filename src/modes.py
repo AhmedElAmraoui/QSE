@@ -48,7 +48,7 @@ class ExpectationEngine:
 
         # Measurement-Pfad (QASM_IDEAL/FAKE)
         pauli_strings = [p.to_label() for p in H.paulis]
-        groups = group_paulis(pauli_strings)  # QWC/„lokal messbar“ basierend auf deinem Code
+        groups = group_paulis(pauli_strings)
         meas_bases = [determine_measurement_basis(g) for g in groups]
 
         circuits = apply_measurement_bases(circuit, meas_bases)
@@ -64,7 +64,7 @@ class ExpectationEngine:
 
     def expectations_for_observable(self, Obs: SparsePauliOp, circuit):
         """
-        Wie energy(), aber für ein beliebiges SparsePauliOp (brauchst du beim Subspace-Build).
+        Wie energy(), aber für ein beliebiges SparsePauliOp.
         """
         if self.cfg.mode == EstimatorMode.STATEVECTOR:
             psi = Statevector.from_instruction(circuit)

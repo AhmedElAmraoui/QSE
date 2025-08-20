@@ -68,7 +68,6 @@ def run_experiment(hx: float, hz: float, J: float = -1,
     # --- Optimierung (VQE) ---
     x_opt, E_vqe = optimize_energy_objective(x0, cost, method="COBYLA", maxiter=100)
     circ_opt = build_hva_layers(x_opt, backend=run_cfg.backend, num_layers=num_layers)
-    # Sicherheitshalber Energie noch einmal evaluieren (identisch zu E_vqe)
     E_vqe = float(engine.energy(H, circ_opt))
 
     # Relativer Fehler VQE (falls E_exact da)
