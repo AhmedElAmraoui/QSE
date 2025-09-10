@@ -114,10 +114,8 @@ def run_experiment(hx: float, hz: float, J: float = -1,
     H_red, S_red = engine.expectations_for_observable(H_dict, circ_opt)
     
     # Hermitisieren & numerisch stabilisieren
-    H_red = 0.5 * (H_red + H_red.conj().T)
-    H_red = np.real_if_close(H_red)
-    S_red = 0.5 * (S_red + S_red.conj().T)
-    S_red = np.real_if_close(S_red)
+    H_red = 0.5*(H_red + H_red.conj().T); H_red = np.real_if_close(H_red)
+    S_red = 0.5*(S_red + S_red.conj().T); S_red = np.real_if_close(S_red)
 
     # Generalized EVP mit Trace-Regularisierung
     w, U = np.linalg.eigh(S_red)
