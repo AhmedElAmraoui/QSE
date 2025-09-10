@@ -43,6 +43,17 @@ def group_paulis(pauli_strings):
 
     return list(groups.values())
 
+def strip_phase(pauli_str: str) -> str:
+    """
+    Entfernt führende Phasen ('-','+','i','-i') aus einem Pauli-String.
+    """
+    # alle gültigen Phase-Präfixe
+    prefixes = ['-i', '+i', 'i', '-', '+']
+    for pref in prefixes:
+        if pauli_str.startswith(pref):
+            return pauli_str[len(pref):]
+    return pauli_str
+
 def determine_measurement_basis(pauli_group):
     """
     Bestimmt eine Messbasis (als Liste von 'X', 'Y', 'Z', 'I') für eine Gruppe kommutierender Pauli-Strings.
@@ -69,3 +80,35 @@ def determine_measurement_basis(pauli_group):
             raise ValueError(f"Nicht kompatible Paulis auf Qubit {qubit}: {paulis_on_qubit}")
 
     return basis
+
+def determine_measurement_bases(pauli_groups: list[list[str]]) -> list[list[str]]:
+    """
+    Bestimmt die Messbasen für eine Liste von Pauli-Gruppen.
+    Rückgabe: Liste von Basen (jeweils Liste von 'X', 'Y', 'Z', 'I').
+    """
+    bases = []
+    for group in pauli_groups:
+        num_qubits = len(group[0])
+        basis = ['Z'] * num_qubits  # Default: Messung in Z
+
+        for qubit in range(num_qubits):
+            paulis_on_qubit = set(
+                p[num_qubits - 1 - qubit] for p in group if p[num_qubits - 1 - qubit] != 'I'
+            )
+
+            if not paulis_on_qubit:
+                basis[qubit] = 'I'
+            elif paulis_on_qubit == {'Z'}:
+                basis[qubit] = 'Z'
+            elif paulis_on_qubit == {'X'}:
+                basis[qubit] = 'X'
+            elif paulis_on_qubit == {'Y'}:
+                basis[qubit] = 'Y'
+            else:
+                raise ValueError(
+                    f"Nicht kompatible Paulis auf Qubit {qubit}: {paulis_on_qubit}"
+                )
+
+        bases.append(basis)
+
+    return bases
