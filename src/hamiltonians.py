@@ -37,7 +37,7 @@ def get_unique_bonds(coupling_map):
         bond_set.add(bond)
     return list(bond_set)
 
-def build_sparse_hamiltonian(hx, hz, backend, J=-1, return_paulis=False):
+def build_sparse_hamiltonian(hx, hz, backend, J=-1, return_paulis=False, as_dict=False):
     num_qubits, coupling_map = get_backend_info(backend)
     bonds = get_unique_bonds(coupling_map)
     paulis = []
@@ -66,9 +66,17 @@ def build_sparse_hamiltonian(hx, hz, backend, J=-1, return_paulis=False):
         paulis.append(pauli_z)
         coeffs.append(hz)
 
-    hamiltonian = SparsePauliOp.from_list(list(zip(paulis, coeffs)))
-
+    if as_dict:
+        hamiltonian = dict(zip(paulis, coeffs))
+    else:
+        hamiltonian = SparsePauliOp.from_list(list(zip(paulis, coeffs)))
+        
     if return_paulis:
         return hamiltonian, paulis
     else:
         return hamiltonian
+
+def dict_to_sparsepauliop(pauli_dict: dict[str, complex]) -> SparsePauliOp:
+    labels = list(pauli_dict.keys())
+    coeffs = list(pauli_dict.values())
+    return SparsePauliOp(labels, coeffs)

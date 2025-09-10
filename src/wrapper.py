@@ -3,45 +3,65 @@ import numpy as np
 from qiskit_ibm_runtime.fake_provider import FakeQuitoV2
 from scipy.linalg import fractional_matrix_power
 
-from .modes import EstimatorMode, RunConfig, ExpectationEngine
-from .hamiltonians import build_sparse_hamiltonian
+from .modes import EstimatorMode, RunConfig, ExpectationEngine, SubspaceMode
+from .hamiltonians import build_sparse_hamiltonian, dict_to_sparsepauliop
 from .ansatz import build_hva_layers
 from .initparams import find_best_initial_params, find_best_initial_params_counts
 from .energy import compute_exact_ground_energy
 from .optimize import optimize_energy_objective
-from .subspace import unique_paulis_up_to_N, generate_all_transformed_hamiltonians, generate_all_pauli_products
 
 @dataclass
 class ExperimentResult:
-    params: np.ndarray                 # optimierte HVA-Parameter
-    vqe_energy: float                  # Energie nach VQE
-    subspace_energy: float | None      # Energie nach Subspace (falls subspace=True)
-    rel_error_vqe: float | None        # |E_vqe - E_exact| / |E_exact|, falls berechenbar
-    rel_error_subspace: float | None   # dito für Subspace
-    improvement_abs: float | None      # E_vqe - E_subspace (positiv = besser)
-    improvement_vs_vqe_pct: float | None  # (E_vqe - E_sub)/|E_vqe| * 100
-    improvement_vs_exact_pct: float | None # (|err_vqe|-|err_sub|)/|err_vqe| *100, falls exact
+    params: np.ndarray
+    vqe_energy: float
+    subspace_energy: float | None
+    rel_error_vqe: float | None
+    rel_error_subspace: float | None
+    improvement_abs: float | None
+    improvement_vs_vqe_pct: float | None
+    improvement_vs_exact_pct: float | None
     mode: EstimatorMode
-    subspace_used: bool
-    meta: dict                         # optionale Zusatzinfos (rank, shots, etc.)
+    subspace_mode: SubspaceMode
+    meta: dict
 
 def run_experiment(hx: float, hz: float, J: float = -1,
                    num_layers: int = 1,
                    mode: str = "statevector",
-                   subspace: bool = False,
+                   subspace: str | bool = False,
                    shots: int = 8192,
-                   N_subspace: int = 1):
+                   N_subspace: int = 1,
+                   backend= FakeQuitoV2()):
 
     # --- Mode -> RunConfig ---
+    # Mode-Mapping
     if mode == "statevector":
-        run_cfg = RunConfig(EstimatorMode.STATEVECTOR, backend=FakeQuitoV2())
+        est_mode = EstimatorMode.STATEVECTOR
     elif mode == "qasm_ideal":
-        run_cfg = RunConfig(EstimatorMode.QASM_IDEAL, backend=FakeQuitoV2(), shots=shots)
+        est_mode = EstimatorMode.QASM_IDEAL
     elif mode == "qasm_fake":
-        run_cfg = RunConfig(EstimatorMode.QASM_FAKE, backend=FakeQuitoV2(), shots=shots)
+        est_mode = EstimatorMode.QASM_FAKE
     else:
         raise ValueError("mode must be 'statevector', 'qasm_ideal' or 'qasm_fake'")
 
+    # Subspace-Mapping
+    if subspace is True:
+        subspace_mode = SubspaceMode.COARSE
+    elif subspace is False or subspace == "none":
+        subspace_mode = SubspaceMode.NONE
+    elif subspace == "fine":
+        subspace_mode = SubspaceMode.FINE
+    elif subspace == "coarse":
+        subspace_mode = SubspaceMode.COARSE
+    else:
+        raise ValueError("subspace must be False/True or 'none'/'coarse'/'fine'")
+
+    run_cfg = RunConfig(
+        mode=est_mode,
+        backend=backend,
+        shots=shots,
+        subspace_mode=subspace_mode,
+        N_subspace=N_subspace
+    )
     engine = ExpectationEngine(run_cfg)
 
     # --- Hamiltonian ---
@@ -85,28 +105,19 @@ def run_experiment(hx: float, hz: float, J: float = -1,
             improvement_vs_vqe_pct=None,
             improvement_vs_exact_pct=None,
             mode=run_cfg.mode,
-            subspace_used=False,
+            subspace_mode=run_cfg.subspace_mode,
             meta={"shots": shots, "N_subspace": None, "num_qubits": num_qubits}
         )
 
     # --- Subspace-QSE ---
-    basis = list(unique_paulis_up_to_N([p.to_label() for p in H.paulis], N=N_subspace))
-    n = len(basis)
-
-    H_obs = generate_all_transformed_hamiltonians(H, basis)
-    S_obs = generate_all_pauli_products(basis)
-
-    H_red = np.zeros((n, n), dtype=complex)
-    S_red = np.zeros((n, n), dtype=complex)
-
-    for (Pi, Pk), Obs in H_obs.items():
-        i, j = basis.index(Pi), basis.index(Pk)
-        H_red[i, j] = engine.expectations_for_observable(Obs, circ_opt)
-        S_red[i, j] = engine.expectations_for_observable(S_obs[(Pi, Pk)], circ_opt)
-
+    H_dict = build_sparse_hamiltonian(hx=hx, hz=hz, backend=run_cfg.backend, J=J, as_dict=True)
+    H_red, S_red = engine.expectations_for_observable(H_dict, circ_opt)
+    
     # Hermitisieren & numerisch stabilisieren
     H_red = 0.5*(H_red + H_red.conj().T); H_red = np.real_if_close(H_red)
     S_red = 0.5*(S_red + S_red.conj().T); S_red = np.real_if_close(S_red)
+    
+    print("H_red size:", H_red.shape)
 
     # Generalized EVP mit sanftem Cutoff
     w, U = np.linalg.eigh(S_red)
@@ -140,7 +151,7 @@ def run_experiment(hx: float, hz: float, J: float = -1,
         improvement_vs_vqe_pct=improvement_vs_vqe_pct,
         improvement_vs_exact_pct=improvement_vs_exact_pct,
         mode=run_cfg.mode,
-        subspace_used=True,
+        subspace_mode=run_cfg.subspace_mode,
         meta={"shots": shots, "N_subspace": N_subspace, "rank": rank, "num_qubits": num_qubits}
     )
 
