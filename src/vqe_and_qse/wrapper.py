@@ -79,7 +79,7 @@ def run_experiment(Hamiltonian,
 
     # --- Cost: immer Energie minimieren ---
     def cost(params):
-        return float(engine.energy(Hamiltonian, circuit.bind_parameters(params)))
+        return float(engine.energy(Hamiltonian, circuit.assign_parameters(params)))
     
     if Initial_Params is None:
         rng = np.random.default_rng(42)
@@ -87,7 +87,7 @@ def run_experiment(Hamiltonian,
 
     # --- Optimierung (VQE) ---
     x_opt, E_vqe = optimize_energy_objective(Initial_Params, cost, method="COBYLA", maxiter=100)
-    circ_opt = circuit.bind_parameters(x_opt)
+    circ_opt = circuit.assign_parameters(x_opt)
     E_vqe = float(engine.energy(Hamiltonian, circ_opt))
 
     # Relativer Fehler VQE (falls E_exact da)

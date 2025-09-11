@@ -1,0 +1,17 @@
+setup.py
+src/vqe_and_qse/__init__.py
+src/vqe_and_qse/ansatz.py
+src/vqe_and_qse/energy.py
+src/vqe_and_qse/grouping.py
+src/vqe_and_qse/hamiltonians.py
+src/vqe_and_qse/initparams.py
+src/vqe_and_qse/krylov_subspace.py
+src/vqe_and_qse/measurement.py
+src/vqe_and_qse/modes.py
+src/vqe_and_qse/optimize.py
+src/vqe_and_qse/subspace.py
+src/vqe_and_qse/wrapper.py
+src/vqe_and_qse.egg-info/PKG-INFO
+src/vqe_and_qse.egg-info/SOURCES.txt
+src/vqe_and_qse.egg-info/dependency_links.txt
+src/vqe_and_qse.egg-info/top_level.txt
